@@ -16,3 +16,5 @@ app_fichier:
     path: /fichier/{nomFichier}
     controller: App\Controller\TraitementController::afficherFichier
     methods: [GET]
+
+

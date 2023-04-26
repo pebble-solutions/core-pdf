@@ -1,15 +1,20 @@
 {% extends 'base.html.twig' %}
 
 {% block body %}
+    {% if app.session.flashBag.has('success') %}
+        <div class="alert alert-success">{{ app.session.flashBag.get('success')[0] }}</div>
+    {% endif %}
     <h1>Liste des fichiers générés</h1>
 
     {% if fichiers|length == 0 %}
         <p>Aucun fichier n'a été généré pour le moment.</p>
     {% else %}
         <ul>
-            {% for fichier in fichiers %}
-                <li><a href="{{ path('app_fichier', {'nomFichier': fichier}) }}">{{ fichier }}</a></li>
-            {% endfor %}
+    {% for fichier in fichiers %}
+        {% set nomFichier = fichier|split('.')|first %}
+        {% set extension = fichier|split('.')|last %}
+        <li><a href="{{ path('app_fichier', {'nomFichier': nomFichier, 'extension': extension}) }}">{{ fichier }}</a></li>
+    {% endfor %}
         </ul>
     {% endif %}
 {% endblock %}

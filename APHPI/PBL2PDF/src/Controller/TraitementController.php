@@ -31,7 +31,9 @@ class TraitementController extends AbstractController
             // TODO: Appel à la méthode de traitement du fichier
             $this->traiterFichier($fileName);
 
-            return $this->redirectToRoute('app_traitement');
+            $this->addFlash('success', 'Le fichier a été téléchargé avec succès.');
+
+            return $this->redirectToRoute('app_liste_fichiers');
         }
 
         return $this->render('traitement/upload.html.twig', [
@@ -61,10 +63,11 @@ class TraitementController extends AbstractController
         ]);
     }
     #[Route('/fichiers/{nomFichier}', name: 'app_fichier')]
-    public function afficherFichier(string $nomFichier): Response
-    {
-        $contenu = file_get_contents($this->getParameter('files_directory') . '/' . $nomFichier);
-        return new Response($contenu);
-    }
+public function afficherFichier(Request $request, string $nomFichier): Response
+{
+    $extension = $request->query->get('extension');
+    $contenu = file_get_contents($this->getParameter('files_directory') . '/' . $nomFichier . '.' . $extension);
+    return new Response($contenu);
+}
 }
 
