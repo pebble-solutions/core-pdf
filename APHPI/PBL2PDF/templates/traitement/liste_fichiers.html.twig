@@ -1,0 +1,15 @@
+{% extends 'base.html.twig' %}
+
+{% block body %}
+    <h1>Liste des fichiers générés</h1>
+
+    {% if fichiers|length == 0 %}
+        <p>Aucun fichier n'a été généré pour le moment.</p>
+    {% else %}
+        <ul>
+            {% for fichier in fichiers %}
+                <li><a href="{{ path('app_fichier', {'nomFichier': fichier}) }}">{{ fichier }}</a></li>
+            {% endfor %}
+        </ul>
+    {% endif %}
+{% endblock %}

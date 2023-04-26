@@ -1,0 +1,18 @@
+controllers:
+    resource: ../src/Controller/
+    type: attribute
+
+app_traitement:
+    path: /traitement
+    controller: App\Controller\TraitementController::index
+    methods: [GET, POST]
+
+app_liste_fichiers:
+    path: /liste-fichiers
+    controller: App\Controller\TraitementController::listeFichiers
+    methods: [GET]
+
+app_fichier:
+    path: /fichier/{nomFichier}
+    controller: App\Controller\TraitementController::afficherFichier
+    methods: [GET]
