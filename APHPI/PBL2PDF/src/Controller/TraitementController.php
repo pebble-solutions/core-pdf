@@ -40,6 +40,8 @@ class TraitementController extends AbstractController
 
             $this->addFlash('success', 'Le fichier a été téléchargé avec succès.');
 
+            unlink($this->getParameter('files_directory') . '/' . $fileName);
+
             return $this->redirectToRoute('app_liste_fichiers');
         }
 
@@ -55,27 +57,47 @@ class TraitementController extends AbstractController
         $privateKey = RSA::load(file_get_contents('/var/www/html/id_rsa'));
         $publicKey = RSA::load(file_get_contents('/var/www/html/id_rsa.pub'));
     
+
+
         if (!$ssh->login('root', $privateKey)) {
             exit('Login Failed');
         }
 
-
         // Chemin du fichier distant et local
-        $remotePath = '/Work/Convert/file.html';
-        $localPath = $this->getParameter('files_directory').'./file.html';
+        $remoteDir = '/Work/Convert/';
+        $localPath = $this->getParameter('files_directory')."/$filePath";
 
-        // Téléchargement du fichier
-        $ssh->put($remotePath, $localPath);
+        // Vérifier si le répertoire distant existe, sinon le créer
+        if (!$ssh->is_dir($remoteDir)) {
+            $ssh->mkdir($remoteDir, -1, true);
+        }
 
-        // Exécution de la commande dans le conteneur Ubuntu
-        $command = 'cd /Work && sh run.sh';
-        $result = $ssh->exec($command);
-    
-        $ssh->get($this->getParameter('files_directory').'./file.html.pdf','/Work/Convert/file.html.pdf');
 
+        // Téléversement du fichier le conteneur ubuntu
+        if(!$ssh->put($remoteDir."/$filePath", $localPath, SFTP::SOURCE_LOCAL_FILE)){
+            exit("Le versement du fichier a echoué. Erreur : " . $ssh->getLastSFTPError());
+        }
+        
+
+        // Exécution du script run.sh sur le conteneur ubuntu
+        $command = '/Work/run.sh';
+        if(!$ssh->exec($command)){
+            exit("Problème lors de la conversion du fichier");
+        }
+        
+        //téléchargement du pdf depuis le conteneur ubuntu
+        if(!$ssh->get("/Work/Convert/$filePath.pdf",$this->getParameter('files_directory')."/$filePath.pdf")){
+            exit("Impossible de télécharger le fichier");
+        }
+
+        $command = "rm /Work/Convert/$filePath.pdf";
+        if($ssh->exec($command)){
+            exit("Problème lors du nettoyage");
+        }
+        
         $ssh->disconnect();
     
-        return $result;
+        return "success";
     }
 
 
@@ -96,7 +118,7 @@ class TraitementController extends AbstractController
     public function afficherFichier(Request $request, string $nomFichier): Response
     {
         $extension = $request->query->get('extension');
-        $contenu = file_get_contents($this->getParameter('files_directory') . '/' . $nomFichier . '.' . $extension);
+        $contenu = file_get_contents($this->getParameter('files_directory') . '/' . $nomFichier . '.html.' . $extension);
         return new Response($contenu);
     }
 }
