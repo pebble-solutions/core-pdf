@@ -22,25 +22,42 @@ class TraitementController extends AbstractController
     {
         $form = $this->createFormBuilder()
             ->add('file', FileType::class)
+            ->add('header', FileType::class)
+            ->add('footer', FileType::class)
             ->getForm();
 
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
             $file = $form->get('file')->getData();
-            $fileName = uniqid() . '.' . $file->guessExtension();
+            $header = $form->get('header')->getData();
+            $footer = $form->get('footer')->getData();
+
+            $fileName = uniqid() . '.html';
+            $headerName = 'header.html';
+            $footerName = 'footer.html';
 
             $file->move(
                 $this->getParameter('files_directory'),
                 $fileName
             );
+            $header->move(
+                $this->getParameter('files_directory'),
+                $headerName
+            );
+            $footer->move(
+                $this->getParameter('files_directory'),
+                $footerName
+            );
 
             // TODO: Appel à la méthode de traitement du fichier
-            $this->traiterFichier($fileName);
+            $this->traiterFichier($fileName, $headerName, $footerName);
 
             $this->addFlash('success', 'Le fichier a été téléchargé avec succès.');
 
             unlink($this->getParameter('files_directory') . '/' . $fileName);
+            unlink($this->getParameter('files_directory') . '/' . $headerName);
+            unlink($this->getParameter('files_directory') . '/' . $footerName);
 
             return $this->redirectToRoute('app_liste_fichiers');
         }
@@ -50,17 +67,18 @@ class TraitementController extends AbstractController
         ]);
     }
 
-    private function traiterFichier(string $filePath): string
+
+    private function traiterFichier(string $filePath, string $headerPath, string $footerPath): string
     {
         
-        $ssh = new SFTP('172.19.0.3');
+        $ssh = new SFTP('html2pdf');
         $privateKey = RSA::load(file_get_contents('/var/www/html/id_rsa'));
         $publicKey = RSA::load(file_get_contents('/var/www/html/id_rsa.pub'));
     
 
 
         if (!$ssh->login('root', $privateKey)) {
-            exit('Login Failed');
+            exit('Login Failed :' .$ssh->getLastError());
         }
 
         // Chemin du fichier distant et local
@@ -72,12 +90,31 @@ class TraitementController extends AbstractController
             $ssh->mkdir($remoteDir, -1, true);
         }
 
-
         // Téléversement du fichier le conteneur ubuntu
         if(!$ssh->put($remoteDir."/$filePath", $localPath, SFTP::SOURCE_LOCAL_FILE)){
             exit("Le versement du fichier a echoué. Erreur : " . $ssh->getLastSFTPError());
         }
-        
+
+        $remoteDir = '/Work/Divers/';
+        $localHeader = $this->getParameter('files_directory')."/$headerPath";
+        $localFooter = $this->getParameter('files_directory')."/$footerPath";
+
+
+        // Vérifier si le répertoire distant existe, sinon le créer
+        if (!$ssh->is_dir($remoteDir)) {
+            $ssh->mkdir($remoteDir, -1, true);
+        }
+
+
+        // Téléversement des fichiers divers sur le conteneur ubuntu
+        if(!$ssh->put($remoteDir."/$headerPath", $localHeader, SFTP::SOURCE_LOCAL_FILE)){
+            exit("Le versement du header a echoué. Erreur : " . $ssh->getLastSFTPError());
+        }
+
+        // Téléversement des fichiers divers sur le conteneur ubuntu
+        if(!$ssh->put($remoteDir."/$footerPath", $localFooter, SFTP::SOURCE_LOCAL_FILE)){
+            exit("Le versement du footer a echoué. Erreur : " . $ssh->getLastSFTPError());
+        }
 
         // Exécution du script run.sh sur le conteneur ubuntu
         $command = '/Work/run.sh';
@@ -118,8 +155,30 @@ class TraitementController extends AbstractController
     public function afficherFichier(Request $request, string $nomFichier): Response
     {
         $extension = $request->query->get('extension');
-        $contenu = file_get_contents($this->getParameter('files_directory') . '/' . $nomFichier . '.html.' . $extension);
-        return new Response($contenu);
+        $filePath = $this->getParameter('files_directory') . '/' . $nomFichier . '.html.' . $extension;
+    
+        $response = new Response();
+        $response->headers->set('Content-Type', 'application/pdf');
+        $response->setContent(file_get_contents($filePath));
+    
+        return $response;
     }
+    
+    #[Route('/fichier/{nomFichier}/supprimer', name: 'app_supprimer_fichier', methods: ['POST'])]
+    public function supprimerFichier(string $nomFichier): Response
+    {
+        $fichierPath = $this->getParameter('files_directory') . '/' . $nomFichier .'.html.pdf';
+        if (file_exists($fichierPath)) {
+            unlink($fichierPath);
+            $this->addFlash('success', 'Le fichier a été supprimé avec succès.');
+        } else {
+            $this->addFlash('error', 'Une erreur est survenue lors de la suppression du fichier.');
+        }
+    
+        return $this->redirectToRoute('app_fichiers');
+    }
+    
+
+
 }
 

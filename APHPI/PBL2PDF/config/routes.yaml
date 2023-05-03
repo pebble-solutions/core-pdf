@@ -17,4 +17,7 @@ app_fichier:
     controller: App\Controller\TraitementController::afficherFichier
     methods: [GET]
 
-
+app_supprimer_fichier:
+    path: '/fichier/{nomFichier}/supprimer'
+    controller: 'App\Controller\TraitementController::supprimerFichier'
+    methods: ['POST']

@@ -10,11 +10,18 @@
         <p>Aucun fichier n'a été généré pour le moment.</p>
     {% else %}
         <ul>
-    {% for fichier in fichiers %}
-        {% set nomFichier = fichier|split('.')|first %}
-        {% set extension = fichier|split('.')|last %}
-        <li><a href="{{ path('app_fichier', {'nomFichier': nomFichier, 'extension': extension}) }}">{{ fichier }}</a></li>
-    {% endfor %}
+{% for fichier in fichiers %}
+    {% set nomFichier = fichier|split('.')|first %}
+    {% set extension = fichier|split('.')|last %}
+    <li>
+        <a href="{{ path('app_fichier', {'nomFichier': nomFichier, 'extension': extension}) }}">{{ fichier }}</a>
+        <form method="post" action="{{ path('app_supprimer_fichier', {'nomFichier': nomFichier, 'extension': extension}) }}" style="display: inline;">
+            <input type="hidden" name="_method" value="DELETE" />
+            <input type="hidden" name="_token" value="{{ csrf_token('supprimer_fichier_' ~ nomFichier ~ '.' ~ extension) }}" />
+            <button type="submit" class="btn btn-danger btn-sm">Supprimer</button>
+        </form>
+    </li>
+{% endfor %}
         </ul>
     {% endif %}
 {% endblock %}
