@@ -2,7 +2,10 @@
 
 namespace App\Controller;
 
-
+use Symfony\Component\HttpFoundation\File\File;
+use Symfony\Component\HttpFoundation\File\UploadedFile;
+use Symfony\Component\Filesystem\Filesystem;
+use Symfony\Component\HttpFoundation\File\MimeType\ExtensionGuesser;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -20,10 +23,16 @@ class TraitementController extends AbstractController
     #[Route('/traitement', name: 'app_traitement')]
     public function index(Request $request): Response
     {
+        $fs = new FileSystem();
+
         $form = $this->createFormBuilder()
             ->add('file', FileType::class)
-            ->add('header', FileType::class)
-            ->add('footer', FileType::class)
+            ->add('header', FileType::class, [
+                'required' => false,
+            ])
+            ->add('footer', FileType::class, [
+                'required' => false,
+            ])
             ->getForm();
 
         $form->handleRequest($request);
@@ -33,24 +42,52 @@ class TraitementController extends AbstractController
             $header = $form->get('header')->getData();
             $footer = $form->get('footer')->getData();
 
+
+            $validExtensions = ['html', 'htm'];
+
+            $extensionFile = $form->get('file')->getData()->getClientOriginalExtension();
+            if (!in_array($extensionFile, $validExtensions)) {
+                throw new \RuntimeException("Le fichier doit être un fichier HTML ou HTM. $extensionFile");
+            }
+            
+            $extensionHeader = $form->get('header')->getData() ? $form->get('header')->getData()->getClientOriginalExtension() : null;
+            if (isset($extensionHeader) && !in_array($extensionHeader, $validExtensions)) {
+                throw new \RuntimeException("Le fichier de l'en-tête doit être un fichier HTML ou HTM.");
+            }
+            
+            $extensionFooter = $form->get('footer')->getData() ? $form->get('footer')->getData()->getClientOriginalExtension() : null;
+            if (isset($extensionFooter) && !in_array($extensionFooter, $validExtensions)) {
+                throw new \RuntimeException("Le fichier de pied de page doit être un fichier HTML ou HTM.");
+            }
+            
+
             $fileName = uniqid() . '.html';
             $headerName = 'header.html';
             $footerName = 'footer.html';
+
 
             $file->move(
                 $this->getParameter('files_directory'),
                 $fileName
             );
-            $header->move(
-                $this->getParameter('files_directory'),
-                $headerName
-            );
-            $footer->move(
-                $this->getParameter('files_directory'),
-                $footerName
-            );
 
-            // TODO: Appel à la méthode de traitement du fichier
+            if($header){
+                $header->move(
+                    $this->getParameter('files_directory'),
+                    $headerName
+                );
+            }else{
+                $fs->copy($this->getParameter('default_file_path'),$this->getParameter('files_directory')."/$headerName");
+            }
+            if($footer){
+                $footer->move(
+                    $this->getParameter('files_directory'),
+                    $footerName
+                );
+            }else{
+                $fs->copy($this->getParameter('default_file_path'),$this->getParameter('files_directory')."/$footerName");
+            }
+
             $this->traiterFichier($fileName, $headerName, $footerName);
 
             $this->addFlash('success', 'Le fichier a été téléchargé avec succès.');
@@ -66,7 +103,7 @@ class TraitementController extends AbstractController
             'form' => $form->createView(),
         ]);
     }
-
+    
 
     private function traiterFichier(string $filePath, string $headerPath, string $footerPath): string
     {

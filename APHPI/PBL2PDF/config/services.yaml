@@ -6,6 +6,7 @@
 parameters:
 
     files_directory: '%kernel.project_dir%/public/uploads'
+    default_file_path: '%kernel.project_dir%/public/blank/blank.html'
 
 services:
     # default configuration for services in *this* file
