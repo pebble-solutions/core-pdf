@@ -2,6 +2,8 @@
 
 namespace App\Controller;
 
+
+use App\Message\TraitementFichierMessage;
 use Symfony\Component\HttpFoundation\File\File;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
 use Symfony\Component\Filesystem\Filesystem;
@@ -11,17 +13,16 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\Form\Extension\Core\Type\FileType;
-require_once('/var/www/html/vendor/phpseclib/phpseclib/phpseclib/Crypt/RSA.php');
-require_once('/var/www/html/vendor/phpseclib/phpseclib/phpseclib/Net/SSH2.php');
 use phpseclib3\Net\SFTP;
 use phpseclib3\Crypt\RSA;
 use phpseclib3\Crypt\RSA\PrivateKey;
+use Symfony\Component\Messenger\MessageBusInterface;
 
 
 class TraitementController extends AbstractController
 {
     #[Route('/traitement', name: 'app_traitement')]
-    public function index(Request $request): Response
+    public function index(Request $request,MessageBusInterface $bus): Response
     {
         $fs = new FileSystem();
 
@@ -88,13 +89,17 @@ class TraitementController extends AbstractController
                 $fs->copy($this->getParameter('default_file_path'),$this->getParameter('files_directory')."/$footerName");
             }
 
-            $this->traiterFichier($fileName, $headerName, $footerName);
+
+            $bus->dispatch(new TraitementFichierMessage($fileName,$headerName,$footerName));
+
 
             $this->addFlash('success', 'Le fichier a été téléchargé avec succès.');
 
+            /*
             unlink($this->getParameter('files_directory') . '/' . $fileName);
             unlink($this->getParameter('files_directory') . '/' . $headerName);
             unlink($this->getParameter('files_directory') . '/' . $footerName);
+            */
 
             return $this->redirectToRoute('app_liste_fichiers');
         }
@@ -104,8 +109,8 @@ class TraitementController extends AbstractController
         ]);
     }
     
-
-    private function traiterFichier(string $filePath, string $headerPath, string $footerPath): string
+    /*
+    private  function traiterFichier(string $filePath, string $headerPath, string $footerPath): string
     {
         
         $ssh = new SFTP('html2pdf');
@@ -173,7 +178,7 @@ class TraitementController extends AbstractController
     
         return "success";
     }
-
+    */
 
     #[Route('/fichiers', name: 'app_fichiers')]
     public function listeFichiers(): Response
@@ -215,7 +220,6 @@ class TraitementController extends AbstractController
         return $this->redirectToRoute('app_fichiers');
     }
     
-
 
 }
 
