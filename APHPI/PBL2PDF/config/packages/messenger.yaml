@@ -1,9 +1,6 @@
 framework:
     messenger:
         transports:
-            async:
-                dsn: 'in-memory://'
-                options:
-                    queue_name: async
+            async: "%env(MESSENGER_TRANSPORT_DSN)%"
         routing:
             'App\Message\TraitementFichierMessage': async

@@ -7,14 +7,22 @@ use phpseclib3\Net\SFTP;
 use phpseclib3\Crypt\RSA;
 use phpseclib3\Crypt\RSA\PrivateKey;
 use Symfony\Component\Messenger\Handler\MessageHandlerInterface;
+use Symfony\Component\DependencyInjection\ParameterBag\ParameterBagInterface;
+
 
 class TraitementFichierHandler implements MessageHandlerInterface
 {
 
+    private $parameterBag;
+
+    public function __construct(ParameterBagInterface $parameterBag)
+    {
+        $this->parameterBag = $parameterBag;
+    }
 
     public function __invoke(TraitementFichierMessage $message)
     {
-        dump($message);
+        
         $filePath = $message->getFilePath();
         $headerPath = $message->getHeaderPath();
         $footerPath = $message->getFooterPath();
@@ -31,7 +39,7 @@ class TraitementFichierHandler implements MessageHandlerInterface
 
         // Chemin du fichier distant et local
         $remoteDir = '/Work/Convert/';
-        $localPath = $this->getParameter('files_directory')."/$filePath";
+        $localPath = $this->parameterBag->get('files_directory')."/$filePath";
 
         // Vérifier si le répertoire distant existe, sinon le créer
         if (!$ssh->is_dir($remoteDir)) {
@@ -45,8 +53,8 @@ class TraitementFichierHandler implements MessageHandlerInterface
         }
 
         $remoteDir = '/Work/Divers/';
-        $localHeader = $this->getParameter('files_directory')."/$headerPath";
-        $localFooter = $this->getParameter('files_directory')."/$footerPath";
+        $localHeader = $this->parameterBag->get('files_directory')."/$headerPath";
+        $localFooter = $this->parameterBag->get('files_directory')."/$footerPath";
 
 
         // Vérifier si le répertoire distant existe, sinon le créer
@@ -72,7 +80,7 @@ class TraitementFichierHandler implements MessageHandlerInterface
         }
         
         //téléchargement du pdf depuis le conteneur ubuntu
-        if(!$ssh->get("/Work/Convert/$filePath.pdf",$this->getParameter('files_directory')."/$filePath.pdf")){
+        if(!$ssh->get("/Work/Convert/$filePath.pdf",$this->parameterBag->get('files_directory')."/$filePath.pdf")){
             throw new \RuntimeException("Impossible de télécharger le fichier");
         }
 
