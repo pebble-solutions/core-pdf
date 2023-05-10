@@ -61,36 +61,41 @@ class TraitementController extends AbstractController
                 throw new \RuntimeException("Le fichier de pied de page doit être un fichier HTML ou HTM.");
             }
             
-
-            $fileName = uniqid() . '.html';
+            $id= uniqid();
+            $directory= 'uploads/'.$id;
+            $fileName = $id . '.html';
             $headerName = 'header.html';
             $footerName = 'footer.html';
 
+            if (!file_exists($directory)) {
+                mkdir($directory, 0777, true);
+            }
+
 
             $file->move(
-                $this->getParameter('files_directory'),
+                $directory,
                 $fileName
             );
 
             if($header){
                 $header->move(
-                    $this->getParameter('files_directory'),
+                    $directory,
                     $headerName
                 );
             }else{
-                $fs->copy($this->getParameter('default_file_path'),$this->getParameter('files_directory')."/$headerName");
+                $fs->copy($this->getParameter('default_file_path'),$directory."/$headerName");
             }
             if($footer){
                 $footer->move(
-                    $this->getParameter('files_directory'),
+                    $directory,
                     $footerName
                 );
             }else{
-                $fs->copy($this->getParameter('default_file_path'),$this->getParameter('files_directory')."/$footerName");
+                $fs->copy($this->getParameter('default_file_path'),$directory."/$footerName");
             }
 
 
-            $bus->dispatch(new TraitementFichierMessage($fileName,$headerName,$footerName));
+            $bus->dispatch(new TraitementFichierMessage($id,$fileName,$headerName,$footerName));
 
 
             $this->addFlash('success', 'Le fichier a été téléchargé avec succès.');
@@ -108,82 +113,11 @@ class TraitementController extends AbstractController
             'form' => $form->createView(),
         ]);
     }
-    
-    /*
-    private  function traiterFichier(string $filePath, string $headerPath, string $footerPath): string
-    {
-        
-        $ssh = new SFTP('html2pdf');
-        $privateKey = RSA::load(file_get_contents('/var/www/html/id_rsa'));
-        $publicKey = RSA::load(file_get_contents('/var/www/html/id_rsa.pub'));
-    
-
-
-        if (!$ssh->login('root', $privateKey)) {
-            exit('Login Failed :' .$ssh->getLastError());
-        }
-
-        // Chemin du fichier distant et local
-        $remoteDir = '/Work/Convert/';
-        $localPath = $this->getParameter('files_directory')."/$filePath";
-
-        // Vérifier si le répertoire distant existe, sinon le créer
-        if (!$ssh->is_dir($remoteDir)) {
-            $ssh->mkdir($remoteDir, -1, true);
-        }
-
-        // Téléversement du fichier le conteneur ubuntu
-        if(!$ssh->put($remoteDir."/$filePath", $localPath, SFTP::SOURCE_LOCAL_FILE)){
-            exit("Le versement du fichier a echoué. Erreur : " . $ssh->getLastSFTPError());
-        }
-
-        $remoteDir = '/Work/Divers/';
-        $localHeader = $this->getParameter('files_directory')."/$headerPath";
-        $localFooter = $this->getParameter('files_directory')."/$footerPath";
-
-
-        // Vérifier si le répertoire distant existe, sinon le créer
-        if (!$ssh->is_dir($remoteDir)) {
-            $ssh->mkdir($remoteDir, -1, true);
-        }
-
-
-        // Téléversement des fichiers divers sur le conteneur ubuntu
-        if(!$ssh->put($remoteDir."/$headerPath", $localHeader, SFTP::SOURCE_LOCAL_FILE)){
-            exit("Le versement du header a echoué. Erreur : " . $ssh->getLastSFTPError());
-        }
-
-        // Téléversement des fichiers divers sur le conteneur ubuntu
-        if(!$ssh->put($remoteDir."/$footerPath", $localFooter, SFTP::SOURCE_LOCAL_FILE)){
-            exit("Le versement du footer a echoué. Erreur : " . $ssh->getLastSFTPError());
-        }
-
-        // Exécution du script run.sh sur le conteneur ubuntu
-        $command = '/Work/run.sh';
-        if(!$ssh->exec($command)){
-            exit("Problème lors de la conversion du fichier");
-        }
-        
-        //téléchargement du pdf depuis le conteneur ubuntu
-        if(!$ssh->get("/Work/Convert/$filePath.pdf",$this->getParameter('files_directory')."/$filePath.pdf")){
-            exit("Impossible de télécharger le fichier");
-        }
-
-        $command = "rm /Work/Convert/$filePath.pdf";
-        if($ssh->exec($command)){
-            exit("Problème lors du nettoyage");
-        }
-        
-        $ssh->disconnect();
-    
-        return "success";
-    }
-    */
 
     #[Route('/fichiers', name: 'app_fichiers')]
     public function listeFichiers(): Response
     {
-        $fichiers = scandir($this->getParameter('files_directory'));
+        $fichiers = scandir($this->getParameter('render_directory'));
         $fichiers = array_filter($fichiers, function ($fichier) {
             return $fichier !== '.' && $fichier !== '..';
         });
@@ -197,7 +131,7 @@ class TraitementController extends AbstractController
     public function afficherFichier(Request $request, string $nomFichier): Response
     {
         $extension = $request->query->get('extension');
-        $filePath = $this->getParameter('files_directory') . '/' . $nomFichier . '.html.' . $extension;
+        $filePath = $this->getParameter('render_directory') . '/' . $nomFichier . '.html.' . $extension;
     
         $response = new Response();
         $response->headers->set('Content-Type', 'application/pdf');
@@ -209,7 +143,7 @@ class TraitementController extends AbstractController
     #[Route('/fichier/{nomFichier}/supprimer', name: 'app_supprimer_fichier', methods: ['POST'])]
     public function supprimerFichier(string $nomFichier): Response
     {
-        $fichierPath = $this->getParameter('files_directory') . '/' . $nomFichier .'.html.pdf';
+        $fichierPath = $this->getParameter('render_directory') . '/' . $nomFichier .'.html.pdf';
         if (file_exists($fichierPath)) {
             unlink($fichierPath);
             $this->addFlash('success', 'Le fichier a été supprimé avec succès.');

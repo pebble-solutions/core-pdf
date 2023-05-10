@@ -6,6 +6,7 @@
 parameters:
 
     files_directory: '%kernel.project_dir%/public/uploads'
+    render_directory: '%kernel.project_dir%/public/render'
     default_file_path: '%kernel.project_dir%/public/blank/blank.html'
 
 services:

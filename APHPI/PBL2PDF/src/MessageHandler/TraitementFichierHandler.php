@@ -8,6 +8,8 @@ use phpseclib3\Crypt\RSA;
 use phpseclib3\Crypt\RSA\PrivateKey;
 use Symfony\Component\Messenger\Handler\MessageHandlerInterface;
 use Symfony\Component\DependencyInjection\ParameterBag\ParameterBagInterface;
+use Symfony\Component\Filesystem\Filesystem;
+
 
 
 class TraitementFichierHandler implements MessageHandlerInterface
@@ -23,6 +25,9 @@ class TraitementFichierHandler implements MessageHandlerInterface
     public function __invoke(TraitementFichierMessage $message)
     {
         
+        sleep(30);
+
+        $directory = $message->getDirectory();
         $filePath = $message->getFilePath();
         $headerPath = $message->getHeaderPath();
         $footerPath = $message->getFooterPath();
@@ -39,7 +44,7 @@ class TraitementFichierHandler implements MessageHandlerInterface
 
         // Chemin du fichier distant et local
         $remoteDir = '/Work/Convert/';
-        $localPath = $this->parameterBag->get('files_directory')."/$filePath";
+        $localPath = $this->parameterBag->get('files_directory')."/$directory"."/$filePath";
 
         // Vérifier si le répertoire distant existe, sinon le créer
         if (!$ssh->is_dir($remoteDir)) {
@@ -53,8 +58,8 @@ class TraitementFichierHandler implements MessageHandlerInterface
         }
 
         $remoteDir = '/Work/Divers/';
-        $localHeader = $this->parameterBag->get('files_directory')."/$headerPath";
-        $localFooter = $this->parameterBag->get('files_directory')."/$footerPath";
+        $localHeader = $this->parameterBag->get('files_directory')."/$directory"."/$headerPath";
+        $localFooter = $this->parameterBag->get('files_directory')."/$directory"."/$footerPath";
 
 
         // Vérifier si le répertoire distant existe, sinon le créer
@@ -80,7 +85,7 @@ class TraitementFichierHandler implements MessageHandlerInterface
         }
         
         //téléchargement du pdf depuis le conteneur ubuntu
-        if(!$ssh->get("/Work/Convert/$filePath.pdf",$this->parameterBag->get('files_directory')."/$filePath.pdf")){
+        if(!$ssh->get("/Work/Convert/$filePath.pdf",$this->parameterBag->get('render_directory')."/$filePath.pdf")){
             throw new \RuntimeException("Impossible de télécharger le fichier");
         }
 
@@ -90,6 +95,9 @@ class TraitementFichierHandler implements MessageHandlerInterface
         }
         
         $ssh->disconnect();
+
+        $filesystem = new Filesystem();
+        $filesystem->remove($this->parameterBag->get('files_directory')."/$directory");
 
         return true;
     }
