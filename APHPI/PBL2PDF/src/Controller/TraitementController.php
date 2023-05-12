@@ -2,7 +2,7 @@
 
 namespace App\Controller;
 
-
+use Symfony\Component\HttpFoundation\JsonResponse;
 use App\Message\TraitementFichierMessage;
 use Symfony\Component\HttpFoundation\File\File;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
@@ -17,104 +17,84 @@ use phpseclib3\Net\SFTP;
 use phpseclib3\Crypt\RSA;
 use phpseclib3\Crypt\RSA\PrivateKey;
 use Symfony\Component\Messenger\MessageBusInterface;
-
+use Doctrine\ORM\EntityManagerInterface;
+use App\Entity\Operation;
 
 class TraitementController extends AbstractController
 {
-    #[Route('/traitement', name: 'app_traitement')]
-    public function index(Request $request,MessageBusInterface $bus): Response
+
+    #[Route('/upload', name: 'app_upload', methods:['POST'])]
+    public function uploadFichier(Request $request,MessageBusInterface $bus,EntityManagerInterface $entityManager): Response
     {
         $fs = new FileSystem();
+        $file = $request->files->get('Fichier');
+        $header = $request->files->get('Header');
+        $footer = $request->files->get('Footer');
+        $validExtensions = ['html', 'htm'];
 
-        $form = $this->createFormBuilder()
-            ->add('file', FileType::class)
-            ->add('header', FileType::class, [
-                'required' => false,
-            ])
-            ->add('footer', FileType::class, [
-                'required' => false,
-            ])
-            ->getForm();
+        if (!$request->files->has('Fichier')) {
+            return new JsonResponse(['error' =>'Le fichier HTML n\'a pas été transmis.']);
+        }
+        
+        $extensionFile = $file->getClientOriginalExtension();
 
-        $form->handleRequest($request);
-
-        if ($form->isSubmitted() && $form->isValid()) {
-            $file = $form->get('file')->getData();
-            $header = $form->get('header')->getData();
-            $footer = $form->get('footer')->getData();
-
-
-            $validExtensions = ['html', 'htm'];
-
-            $extensionFile = $form->get('file')->getData()->getClientOriginalExtension();
-            if (!in_array($extensionFile, $validExtensions)) {
-                throw new \RuntimeException("Le fichier doit être un fichier HTML ou HTM. $extensionFile");
-            }
-            
-            $extensionHeader = $form->get('header')->getData() ? $form->get('header')->getData()->getClientOriginalExtension() : null;
-            if (isset($extensionHeader) && !in_array($extensionHeader, $validExtensions)) {
-                throw new \RuntimeException("Le fichier de l'en-tête doit être un fichier HTML ou HTM.");
-            }
-            
-            $extensionFooter = $form->get('footer')->getData() ? $form->get('footer')->getData()->getClientOriginalExtension() : null;
-            if (isset($extensionFooter) && !in_array($extensionFooter, $validExtensions)) {
-                throw new \RuntimeException("Le fichier de pied de page doit être un fichier HTML ou HTM.");
-            }
-            
-            $id= uniqid();
-            $directory= 'uploads/'.$id;
-            $fileName = $id . '.html';
-            $headerName = 'header.html';
-            $footerName = 'footer.html';
-
-            if (!file_exists($directory)) {
-                mkdir($directory, 0777, true);
-            }
-
-
-            $file->move(
-                $directory,
-                $fileName
-            );
-
-            if($header){
-                $header->move(
-                    $directory,
-                    $headerName
-                );
-            }else{
-                $fs->copy($this->getParameter('default_file_path'),$directory."/$headerName");
-            }
-            if($footer){
-                $footer->move(
-                    $directory,
-                    $footerName
-                );
-            }else{
-                $fs->copy($this->getParameter('default_file_path'),$directory."/$footerName");
-            }
-
-
-            $bus->dispatch(new TraitementFichierMessage($id,$fileName,$headerName,$footerName));
-
-
-            $this->addFlash('success', 'Le fichier a été téléchargé avec succès.');
-
-            /*
-            unlink($this->getParameter('files_directory') . '/' . $fileName);
-            unlink($this->getParameter('files_directory') . '/' . $headerName);
-            unlink($this->getParameter('files_directory') . '/' . $footerName);
-            */
-
-            return $this->redirectToRoute('app_liste_fichiers');
+        if (!in_array($extensionFile, $validExtensions)) {
+            return new JsonResponse(['error' => 'Le fichier doit être un fichier HTML ou HTM.']);
         }
 
-        return $this->render('traitement/upload.html.twig', [
-            'form' => $form->createView(),
-        ]);
+        $extensionHeader = $header ? $header->getClientOriginalExtension() : null;
+        if (isset($extensionHeader) && !in_array($extensionHeader, $validExtensions)) {
+            return new JsonResponse(['error' => 'Le fichier de l\'en-tête doit être un fichier HTML ou HTM.']);
+        }
+
+        $extensionFooter = $footer ? $footer->getClientOriginalExtension() : null;
+        if (isset($extensionFooter) && !in_array($extensionFooter, $validExtensions)) {
+            return new JsonResponse(['error' => 'Le fichier de pied de page doit être un fichier HTML ou HTM.']);
+        }
+
+        $id= uniqid();
+        $directory= 'uploads/'.$id;
+        $fileName = $id . '.html';
+        $headerName = 'header.html';
+        $footerName = 'footer.html';
+        if (!file_exists($directory)) {
+            mkdir($directory, 0777, true);
+        }
+        $file->move(
+            $directory,
+            $fileName
+        );
+        if($header){
+            $header->move(
+                $directory,
+                $headerName
+            );
+        }else{
+            $fs->copy($this->getParameter('default_file_path'),$directory."/$headerName");
+        }
+        if($footer){
+            $footer->move(
+                $directory,
+                $footerName
+            );
+        }else{
+            $fs->copy($this->getParameter('default_file_path'),$directory."/$footerName");
+        }
+
+        $operation = new Operation();
+        $operation->setNom($fileName);
+        $operation->setEtat('Running');
+        $entityManager->persist($operation);
+        $entityManager->flush();
+        $operationId = $operation->getId();
+        $bus->dispatch(new TraitementFichierMessage($operationId,$id,$fileName,$headerName,$footerName));
+
+        return new JsonResponse(['success' => 'L\'opération a été enregistrée avec succès. Votre pdf va être généré dans quelques instants.']);
     }
 
-    #[Route('/fichiers', name: 'app_fichiers')]
+
+
+    #[Route('/fichiers', name: 'app_liste_fichiers')]
     public function listeFichiers(): Response
     {
         $fichiers = scandir($this->getParameter('render_directory'));
@@ -122,8 +102,40 @@ class TraitementController extends AbstractController
             return $fichier !== '.' && $fichier !== '..';
         });
     
+        /*
         return $this->render('traitement/liste_fichiers.html.twig', [
             'fichiers' => $fichiers,
+        ]);*/
+
+        $data = [];
+        foreach ($fichiers as $fichier) {
+            $data[] = [
+                'nom' => $fichier,
+            ];
+        }
+
+        return new Response(json_encode($data), 200, [
+            'Content-Type' => 'application/json'
+        ]);
+    }
+
+
+    #[Route('/operations', name: 'app_liste_operations')]
+    public function listeOperations(EntityManagerInterface $entityManager): Response
+    {
+        $operations = $entityManager->getRepository(Operation::class)->findAll();
+    
+        $data = [];
+        foreach ($operations as $operation) {
+            $data[] = [
+                'id' => $operation->getId(),
+                'fichier' => $operation->getNom(),
+                'etat' => $operation->getEtat(),
+            ];
+        }
+    
+        return new Response(json_encode($data), 200, [
+            'Content-Type' => 'application/json'
         ]);
     }
     
@@ -140,20 +152,28 @@ class TraitementController extends AbstractController
         return $response;
     }
     
-    #[Route('/fichier/{nomFichier}/supprimer', name: 'app_supprimer_fichier', methods: ['POST'])]
-    public function supprimerFichier(string $nomFichier): Response
+    #[Route('/fichier/del/{id}/', name: 'app_supprimer_fichier', methods: ['DELETE'])]
+    public function supprimerFichier(EntityManagerInterface $entityManager,int $id): Response
     {
-        $fichierPath = $this->getParameter('render_directory') . '/' . $nomFichier .'.html.pdf';
+        $operation = $entityManager->getRepository(Operation::class)->find($id);
+        $fichierPath = $this->getParameter('render_directory') . '/' . $operation->getNom() .'.pdf';
         if (file_exists($fichierPath)) {
             unlink($fichierPath);
-            $this->addFlash('success', 'Le fichier a été supprimé avec succès.');
+    
+            $operation = $entityManager->getRepository(Operation::class)->find($id);
+            $operation->setEtat('Deleted');
+            $entityManager->persist($operation);
+            $entityManager->flush();
+    
+            $message = 'Le fichier a été supprimé avec succès.';
+            $response = new JsonResponse(['message' => $message], Response::HTTP_OK);
         } else {
-            $this->addFlash('error', 'Une erreur est survenue lors de la suppression du fichier.');
+            $message = 'Une erreur est survenue lors de la suppression du fichier.';
+            $response = new JsonResponse(['message' => $message], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
     
-        return $this->redirectToRoute('app_fichiers');
+        return $response;
     }
-    
 
 }
 

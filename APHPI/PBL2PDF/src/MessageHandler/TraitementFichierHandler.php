@@ -2,6 +2,7 @@
 
 namespace App\MessageHandler;
 
+use App\Controller\TraitementController;
 use App\Message\TraitementFichierMessage;
 use phpseclib3\Net\SFTP;
 use phpseclib3\Crypt\RSA;
@@ -9,6 +10,8 @@ use phpseclib3\Crypt\RSA\PrivateKey;
 use Symfony\Component\Messenger\Handler\MessageHandlerInterface;
 use Symfony\Component\DependencyInjection\ParameterBag\ParameterBagInterface;
 use Symfony\Component\Filesystem\Filesystem;
+use Doctrine\ORM\EntityManagerInterface;
+use App\Entity\Operation;
 
 
 
@@ -16,17 +19,20 @@ class TraitementFichierHandler implements MessageHandlerInterface
 {
 
     private $parameterBag;
+    private $em;
 
-    public function __construct(ParameterBagInterface $parameterBag)
+    public function __construct(ParameterBagInterface $parameterBag,EntityManagerInterface $em)
     {
         $this->parameterBag = $parameterBag;
+        $this->em = $em;
     }
 
     public function __invoke(TraitementFichierMessage $message)
     {
         
-        sleep(30);
-
+        sleep(10);
+        
+        $id = $message->getId();
         $directory = $message->getDirectory();
         $filePath = $message->getFilePath();
         $headerPath = $message->getHeaderPath();
@@ -89,7 +95,7 @@ class TraitementFichierHandler implements MessageHandlerInterface
             throw new \RuntimeException("Impossible de télécharger le fichier");
         }
 
-        $command = "rm /Work/Convert/$filePath.pdf";
+        $command = "rm -rf /Work/Convert";
         if($ssh->exec($command)){
             throw new \RuntimeException("Problème lors du nettoyage");
         }
@@ -99,6 +105,16 @@ class TraitementFichierHandler implements MessageHandlerInterface
         $filesystem = new Filesystem();
         $filesystem->remove($this->parameterBag->get('files_directory')."/$directory");
 
+        $this->updateOperation($this->em,$id);
+
         return true;
+    }
+    
+    private function updateOperation(EntityManagerInterface $entityManager,string $id) {
+        $operation = $entityManager->getRepository(Operation::class)->find($id);
+        $operation->setEtat('Finished');
+
+        $entityManager->persist($operation);
+        $entityManager->flush();
     }
 }

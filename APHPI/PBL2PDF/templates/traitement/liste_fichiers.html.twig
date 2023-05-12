@@ -1,9 +1,6 @@
 {% extends 'base.html.twig' %}
 
 {% block body %}
-    {% if app.session.flashBag.has('success') %}
-        <div class="alert alert-success">{{ app.session.flashBag.get('success')[0] }}</div>
-    {% endif %}
     <h1>Liste des fichiers générés</h1>
 
     {% if fichiers|length == 0 %}

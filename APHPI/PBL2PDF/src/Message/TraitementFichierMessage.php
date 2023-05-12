@@ -1,16 +1,24 @@
 <?php
 namespace App\Message;
 
+use Doctrine\ORM\EntityManagerInterface;
+
 class TraitementFichierMessage
 {
     private $filePath;
 
-    public function __construct(string $directory, string $filePath, string $headerPath, string $footerPath)
+    public function __construct(int $id,string $directory, string $filePath, string $headerPath, string $footerPath)
     {
+        $this->id = $id;
         $this->directory = $directory;
         $this->filePath = $filePath;
         $this->headerPath = $headerPath;
         $this->footerPath = $footerPath;
+    }
+
+    public function getId(): int
+    {
+        return $this->id;
     }
     public function getDirectory(): string
     {

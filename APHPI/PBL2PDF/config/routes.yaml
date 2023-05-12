@@ -2,14 +2,19 @@ controllers:
     resource: ../src/Controller/
     type: attribute
 
-app_traitement:
-    path: /traitement
-    controller: App\Controller\TraitementController::index
-    methods: [GET, POST]
+app_upload:
+    path: /upload
+    controller: App\Controller\TraitementController::uploadFichier
+    methods: [POST]
 
 app_liste_fichiers:
     path: /liste-fichiers
     controller: App\Controller\TraitementController::listeFichiers
+    methods: [GET]
+
+app_liste_operations:
+    path: /liste-operations
+    controller: App\Controller\TraitementController::listeOperations
     methods: [GET]
 
 app_fichier:
@@ -18,6 +23,6 @@ app_fichier:
     methods: [GET]
 
 app_supprimer_fichier:
-    path: '/fichier/{nomFichier}/supprimer'
+    path: '/fichier/del/{id}'
     controller: 'App\Controller\TraitementController::supprimerFichier'
-    methods: ['POST']
+    methods: [DELETE]
