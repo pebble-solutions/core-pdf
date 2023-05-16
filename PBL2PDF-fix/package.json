@@ -1,0 +1,8 @@
+{
+    "name": "html2pdf",
+    "version": "1.0.0",
+    "description": "My project description",
+    "dependencies": {
+      "puppeteer": "^19.0.0"
+    }
+  }
