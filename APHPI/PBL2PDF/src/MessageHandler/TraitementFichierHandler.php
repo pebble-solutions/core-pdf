@@ -29,9 +29,9 @@ class TraitementFichierHandler implements MessageHandlerInterface
 
     public function __invoke(TraitementFichierMessage $message)
     {
+        $filesystem = new Filesystem();
         
-        sleep(10);
-        
+        $cssPath = $message->getCss();
         $id = $message->getId();
         $directory = $message->getDirectory();
         $filePath = $message->getFilePath();
@@ -39,8 +39,8 @@ class TraitementFichierHandler implements MessageHandlerInterface
         $footerPath = $message->getFooterPath();
 
         $ssh = new SFTP('html2pdf');
-        $privateKey = RSA::load(file_get_contents('/var/www/html/id_rsa'));
-        $publicKey = RSA::load(file_get_contents('/var/www/html/id_rsa.pub'));
+        $privateKey = RSA::load(file_get_contents('/root/.ssh/id_rsa'));
+        $publicKey = RSA::load(file_get_contents('/root/.ssh/id_rsa.pub'));
     
 
 
@@ -57,20 +57,27 @@ class TraitementFichierHandler implements MessageHandlerInterface
             $ssh->mkdir($remoteDir, -1, true);
         }
 
+        
         // Téléversement du fichier le conteneur ubuntu
         if(!$ssh->put($remoteDir."/$filePath", $localPath, SFTP::SOURCE_LOCAL_FILE)){
             throw new \RuntimeException("Le versement du fichier a echoué. Erreur : " . $ssh->getLastSFTPError());
 
         }
 
+        
+
         $remoteDir = '/Work/Divers/';
         $localHeader = $this->parameterBag->get('files_directory')."/$directory"."/$headerPath";
         $localFooter = $this->parameterBag->get('files_directory')."/$directory"."/$footerPath";
-
+        $localCss = $this->parameterBag->get('files_directory')."/$directory"."/$cssPath";
 
         // Vérifier si le répertoire distant existe, sinon le créer
         if (!$ssh->is_dir($remoteDir)) {
             $ssh->mkdir($remoteDir, -1, true);
+        }
+
+        if (!$ssh->is_dir("$remoteDir/stylesheet")) {
+            $ssh->mkdir("$remoteDir/stylesheet", -1, true);
         }
 
 
@@ -84,11 +91,20 @@ class TraitementFichierHandler implements MessageHandlerInterface
             throw new \RuntimeException("Le versement du footer a echoué. Erreur : " . $ssh->getLastSFTPError());
         }
 
+        // Téléversement des fichiers divers sur le conteneur ubuntu
+        if(!$ssh->put($remoteDir."/stylesheet/$cssPath", $localCss, SFTP::SOURCE_LOCAL_FILE)){
+            throw new \RuntimeException("Le versement du style a echoué. Erreur : " . $ssh->getLastSFTPError());
+        }
+        
         // Exécution du script run.sh sur le conteneur ubuntu
-        $command = '/Work/run.sh';
+   
+        $command="node /Work/convert.js  /Work/Convert/$filePath /Work/Convert/$filePath.pdf /Work/Divers/header.html /Work/Divers/footer.html";
+
         if(!$ssh->exec($command)){
             throw new \RuntimeException("Problème lors de la conversion du fichier");
         }
+        
+        sleep(10);
         
         //téléchargement du pdf depuis le conteneur ubuntu
         if(!$ssh->get("/Work/Convert/$filePath.pdf",$this->parameterBag->get('render_directory')."/$filePath.pdf")){
@@ -99,10 +115,15 @@ class TraitementFichierHandler implements MessageHandlerInterface
         if($ssh->exec($command)){
             throw new \RuntimeException("Problème lors du nettoyage");
         }
+
+        $command = "rm -rf /Work/Divers";
+        if($ssh->exec($command)){
+            throw new \RuntimeException("Problème lors du nettoyage");
+        }
         
         $ssh->disconnect();
 
-        $filesystem = new Filesystem();
+        
         $filesystem->remove($this->parameterBag->get('files_directory')."/$directory");
 
         $this->updateOperation($this->em,$id);

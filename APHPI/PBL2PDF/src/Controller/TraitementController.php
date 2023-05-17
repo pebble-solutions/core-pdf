@@ -30,6 +30,7 @@ class TraitementController extends AbstractController
         $file = $request->files->get('Fichier');
         $header = $request->files->get('Header');
         $footer = $request->files->get('Footer');
+        $css = $request->files->get('Style');
         $validExtensions = ['html', 'htm'];
 
         if (!$request->files->has('Fichier')) {
@@ -52,11 +53,17 @@ class TraitementController extends AbstractController
             return new JsonResponse(['error' => 'Le fichier de pied de page doit être un fichier HTML ou HTM.']);
         }
 
+        $extensionCss = $css ? $css->getClientOriginalExtension() : null;
+        if (isset($extensionFooter) && !in_array($css, ["css"])) {
+            return new JsonResponse(['error' => 'Le fichier de style doit être un fichier CSS']);
+        }
+
         $id= uniqid();
         $directory= 'uploads/'.$id;
         $fileName = $id . '.html';
         $headerName = 'header.html';
         $footerName = 'footer.html';
+        $cssName = 'style.css';
         if (!file_exists($directory)) {
             mkdir($directory, 0777, true);
         }
@@ -80,6 +87,14 @@ class TraitementController extends AbstractController
         }else{
             $fs->copy($this->getParameter('default_file_path'),$directory."/$footerName");
         }
+        if($css){
+            $css->move(
+                $directory,
+                $cssName
+            );
+        }else{
+            $fs->copy($this->getParameter('default_file_path'),$directory."/$cssName");
+        }
 
         $operation = new Operation();
         $operation->setNom($fileName);
@@ -87,7 +102,7 @@ class TraitementController extends AbstractController
         $entityManager->persist($operation);
         $entityManager->flush();
         $operationId = $operation->getId();
-        $bus->dispatch(new TraitementFichierMessage($operationId,$id,$fileName,$headerName,$footerName));
+        $bus->dispatch(new TraitementFichierMessage($operationId,$id,$fileName,$headerName,$footerName,$cssName));
 
         return new JsonResponse(['success' => 'L\'opération a été enregistrée avec succès. Votre pdf va être généré dans quelques instants.']);
     }
