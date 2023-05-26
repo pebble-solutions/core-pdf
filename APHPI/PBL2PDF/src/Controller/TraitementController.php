@@ -54,7 +54,7 @@ class TraitementController extends AbstractController
         }
 
         $extensionCss = $css ? $css->getClientOriginalExtension() : null;
-        if (isset($extensionFooter) && !in_array($css, ["css"])) {
+        if (isset($extensionCss) && $extensionCss!="css") {
             return new JsonResponse(['error' => 'Le fichier de style doit être un fichier CSS']);
         }
 
@@ -99,6 +99,7 @@ class TraitementController extends AbstractController
         $operation = new Operation();
         $operation->setNom($fileName);
         $operation->setEtat('Running');
+        $operation->setContenuBase64('');
         $entityManager->persist($operation);
         $entityManager->flush();
         $operationId = $operation->getId();
@@ -144,7 +145,7 @@ class TraitementController extends AbstractController
         foreach ($operations as $operation) {
             $data[] = [
                 'id' => $operation->getId(),
-                'fichier' => $operation->getNom(),
+                'fichier' => $operation->getNom().'.pdf',
                 'etat' => $operation->getEtat(),
             ];
         }
@@ -154,19 +155,28 @@ class TraitementController extends AbstractController
         ]);
     }
     
-    #[Route('/fichier/{nomFichier}', name: 'app_fichier')]
-    public function afficherFichier(Request $request, string $nomFichier): Response
+    #[Route('/fichier/{id}', name: 'app_fichier')]
+    public function afficherFichier(EntityManagerInterface $entityManager, int $id): Response
     {
-        $extension = $request->query->get('extension');
-        $filePath = $this->getParameter('render_directory') . '/' . $nomFichier . '.html.' . $extension;
+        $operation = $entityManager->getRepository(Operation::class)->find($id);
+        $fichierPath = $this->getParameter('render_directory') . '/' . $operation->getNom() . '.pdf';
     
-        $response = new Response();
-        $response->headers->set('Content-Type', 'application/pdf');
-        $response->setContent(file_get_contents($filePath));
+        if (file_exists($fichierPath)) {
+            $data = [
+                'id' => $operation->getId(),
+                'fichier' => $operation->getNom().'.pdf',
+                'contenu' => $operation->getContenuBase64(),
+            ];
     
-        return $response;
+            return new Response(json_encode($data), 200, [
+                'Content-Type' => 'application/json'
+            ]);
+        } else {
+            return new Response('Le fichier demandé n\'existe pas.', Response::HTTP_NOT_FOUND);
+        }
     }
     
+
     #[Route('/fichier/del/{id}/', name: 'app_supprimer_fichier', methods: ['DELETE'])]
     public function supprimerFichier(EntityManagerInterface $entityManager,int $id): Response
     {
@@ -177,6 +187,7 @@ class TraitementController extends AbstractController
     
             $operation = $entityManager->getRepository(Operation::class)->find($id);
             $operation->setEtat('Deleted');
+            $operation->setContenuBase64('');
             $entityManager->persist($operation);
             $entityManager->flush();
     

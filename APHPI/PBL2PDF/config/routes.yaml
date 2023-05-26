@@ -18,7 +18,7 @@ app_liste_operations:
     methods: [GET]
 
 app_fichier:
-    path: /fichier/{nomFichier}
+    path: /fichier/{id}
     controller: App\Controller\TraitementController::afficherFichier
     methods: [GET]
 

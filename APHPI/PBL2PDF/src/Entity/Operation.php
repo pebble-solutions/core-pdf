@@ -27,6 +27,24 @@ class Operation
      */
     private $etat;
 
+    /**
+     * @ORM\Column(type="text", nullable=true)
+     */
+    private $contenuBase64;
+
+
+    public function getContenuBase64(): ?string
+    {
+        return $this->contenuBase64;
+    }
+
+    public function setContenuBase64(?string $contenuBase64): self
+    {
+        $this->contenuBase64 = $contenuBase64;
+
+        return $this;
+    }
+
     public function getId(): ?int
     {
         return $this->id;

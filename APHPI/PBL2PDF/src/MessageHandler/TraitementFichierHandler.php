@@ -126,15 +126,20 @@ class TraitementFichierHandler implements MessageHandlerInterface
         
         $filesystem->remove($this->parameterBag->get('files_directory')."/$directory");
 
-        $this->updateOperation($this->em,$id);
+        $this->updateOperation($this->em, $id, $this->parameterBag->get('render_directory')."/$filePath.pdf");
 
         return true;
     }
     
-    private function updateOperation(EntityManagerInterface $entityManager,string $id) {
+    private function updateOperation(EntityManagerInterface $entityManager, string $id, string $pdfFilePath)
+    {
         $operation = $entityManager->getRepository(Operation::class)->find($id);
         $operation->setEtat('Finished');
-
+    
+        // Récupérer le contenu du fichier PDF en base64
+        $fileContents = base64_encode(file_get_contents($pdfFilePath));
+        $operation->setContenuBase64($fileContents);
+    
         $entityManager->persist($operation);
         $entityManager->flush();
     }
