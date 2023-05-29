@@ -1,47 +1,71 @@
 <template>
-    <div class="container py-4">
-      <div class="d-flex justify-content-end mb-3">
-        <button class="btn btn-primary" @click="decreaseSize" :disabled="pdfWidth <= 500">Zoom -</button>
-        <button class="btn btn-primary" @click="increaseSize" :disabled="pdfWidth >= 1100">Zoom +</button>
+  <div class="container py-4">
+    <div v-if="fileIsEmpty" class="text-center">Le fichier PDF est en cours de génération. Veuillez patienter.</div>
+    <div v-else>
+      <div class="d-flex justify-content-between mb-3">
+        <button class="btn btn-danger" @click="deleteFile">Supprimer</button>
+        <div>
+          <button class="btn btn-primary" @click="decreaseSize" :disabled="pdfWidth <= 500">Zoom -</button>
+          <button class="btn btn-primary" @click="increaseSize" :disabled="pdfWidth >= 1100">Zoom +</button>
+        </div>
       </div>
       <div class="d-flex justify-content-center align-items-center">
         <vue-pdf-embed class="border" :source="pdfData" :width="pdfWidth"></vue-pdf-embed>
       </div>
     </div>
-  </template>
-  
-  <script>
-  import VuePdfEmbed from 'vue-pdf-embed';
-  
-  export default {
-    components: {
-      VuePdfEmbed
+  </div>
+</template>
+
+<script>
+
+import VuePdfEmbed from 'vue-pdf-embed';
+import axios from 'axios';
+
+export default {
+  components: {
+    VuePdfEmbed
+  },
+  props: {
+    file: Object
+  },
+  data() {
+    return {
+      pdfWidth: 1000
+    };
+  },
+  computed: {
+    pdfData() {
+      return `data:application/pdf;base64,${this.file.contenu}`;
     },
-    props: {
-      file: Object
-    },
-    data() {
-      return {
-        pdfWidth: 1000
-      };
-    },
-    computed: {
-      pdfData() {
-        return `data:application/pdf;base64,${this.file.contenu}`;
+    fileIsEmpty() {
+      return !this.file.contenu;
+    }
+  },
+  methods: {
+    increaseSize() {
+      if (this.pdfWidth <= 1100) {
+        this.pdfWidth += 100;
       }
     },
-    methods: {
-      increaseSize() {
-        if (this.pdfWidth <= 1100) {
-          this.pdfWidth += 100;
-        }
-      },
-      decreaseSize() {
-        if (this.pdfWidth >= 500) {
-          this.pdfWidth -= 100;
-        }
+    decreaseSize() {
+      if (this.pdfWidth >= 500) {
+        this.pdfWidth -= 100;
       }
+    },
+    deleteFile() {
+      const apiUrl = `http://172.18.0.3/public/fichier/del/${this.file.id}`;
+
+      axios
+        .delete(apiUrl)
+        .then(response => {
+          // Suppression réussie
+          this.$router.push('/operation');
+          console.log(response);
+        })
+        .catch(error => {
+          console.error(error+"Une erreur s'est produite lors de la suppression du fichier.");
+        });
     }
   }
-  </script>
-  
+}
+</script>
