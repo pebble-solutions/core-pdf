@@ -1,9 +1,8 @@
 <template>
 	<div class="container py-4">
-		<div class="card">
-			<Spinner v-if="!pending.fichier"></Spinner>
-			<DisplayFile :file="fichier" v-else>
-
+		<Spinner v-if="!pending.fichier"></Spinner>
+		<div class="card" v-else>
+			<DisplayFile :file="fichier">
 			</DisplayFile>
 		</div>
 	</div>

@@ -8,6 +8,7 @@
           <button class="btn btn-primary" @click="decreaseSize" :disabled="pdfWidth <= 500">Zoom -</button>
           <button class="btn btn-primary" @click="increaseSize" :disabled="pdfWidth >= 1100">Zoom +</button>
         </div>
+        <button class="btn btn-success" @click="downloadPDF">Télécharger</button>
       </div>
       <div class="d-flex justify-content-center align-items-center">
         <vue-pdf-embed class="border" :source="pdfData" :width="pdfWidth"></vue-pdf-embed>
@@ -17,7 +18,6 @@
 </template>
 
 <script>
-
 import VuePdfEmbed from 'vue-pdf-embed';
 import axios from 'axios';
 
@@ -63,8 +63,16 @@ export default {
           console.log(response);
         })
         .catch(error => {
-          console.error(error+"Une erreur s'est produite lors de la suppression du fichier.");
+          console.error("Une erreur s'est produite lors de la suppression du fichier.", error);
         });
+    },
+    downloadPDF() {
+      const link = document.createElement('a');
+      link.href = this.pdfData;
+      link.download = this.file.fichier;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
     }
   }
 }
