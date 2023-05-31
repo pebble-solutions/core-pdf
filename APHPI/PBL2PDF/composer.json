@@ -1,7 +1,7 @@
 {
     "type": "project",
     "license": "proprietary",
-    "minimum-stability": "stable",
+    "minimum-stability": "dev",
     "prefer-stable": true,
     "require": {
         "php": ">=8.1",
@@ -40,7 +40,8 @@
         "symfony/web-link": "6.1.*",
         "symfony/yaml": "6.1.*",
         "twig/extra-bundle": "^2.12|^3.0",
-        "twig/twig": "^2.12|^3.0"
+        "twig/twig": "^2.12|^3.0",
+        "pebble/pas-token-client": "dev-main"
     },
     "require-dev": {
         "doctrine/annotations": "^2.0",
@@ -107,5 +108,15 @@
             "allow-contrib": false,
             "require": "6.1.*"
         }
-    }
+    },
+    "repositories": [
+        {
+            "type": "vcs",
+            "url": "https://github.com/pebble-solutions/pas-token-client"
+        },
+        {
+            "type": "vcs",
+            "url": "https://github.com/pebble-solutions/rsa-key-manager"
+        }
+    ]
 }

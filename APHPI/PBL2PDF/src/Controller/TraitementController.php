@@ -19,10 +19,32 @@ use phpseclib3\Crypt\RSA\PrivateKey;
 use Symfony\Component\Messenger\MessageBusInterface;
 use Doctrine\ORM\EntityManagerInterface;
 use App\Entity\Operation;
+use Pebble\Security\PAS\PasToken;
+use Throwable;
+
+
 
 class TraitementController extends AbstractController
 {
     
+
+    public function AuthToken(){
+        $token = new PasToken();
+        try {
+            $token->getTokenFromAuthorizationHeader()->decode();
+            return $token;
+            }
+          catch (Throwable $e) {
+            throw new \InvalidArgumentException('Error : '.$e->getMessage());
+          }
+    }
+
+    #[Route('/test', name:'app_test', methods:['GET'])]
+    public function test(){
+        $token=$this->AuthToken();
+        return new JsonResponse(['success' => $token->getExp()]);
+    }
+
     #[Route('/upload', name: 'app_upload', methods:['POST'])]
     public function uploadFichier(Request $request, MessageBusInterface $bus, EntityManagerInterface $entityManager): Response
     {
@@ -172,6 +194,7 @@ class TraitementController extends AbstractController
     #[Route('/operations', name: 'app_liste_operations')]
     public function listeOperations(EntityManagerInterface $entityManager): Response
     {
+        $token=$this->AuthToken();
         try {
             $operations = $entityManager->getRepository(Operation::class)->findAll();
 

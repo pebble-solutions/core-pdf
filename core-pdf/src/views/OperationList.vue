@@ -31,7 +31,7 @@ export default {
 
 		loadFichier(id) {
 			this.pending.fichier = false
-			axios.get('http://172.18.0.3/public/fichier/' + id).then(response => {
+			axios.get('http://172.18.0.2/public/fichier/' + id).then(response => {
 				this.$store.dispatch('refreshFichier', response.data);
 				this.fichier = response.data;
 			})
@@ -42,7 +42,7 @@ export default {
 
 
 		deleteOperation(id) {
-			axios.delete(`http://172.18.0.3/public/fichier/del/${id}`)
+			axios.delete(`http://172.18.0.2/public/fichier/del/${id}`)
 				.then(response => {
 					// Gérer la réponse de suppression ici
 					console.log(response);
