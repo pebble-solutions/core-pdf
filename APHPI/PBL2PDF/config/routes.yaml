@@ -17,6 +17,12 @@ app_liste_operations:
     controller: App\Controller\TraitementController::listeOperations
     methods: [GET]
 
+app_liste_operations_login:
+    path: /liste-operations/{login}
+    controller: App\Controller\TraitementController::listeOperationsLogin
+    methods: [GET]
+
+
 app_fichier:
     path: /fichier/{id}
     controller: App\Controller\TraitementController::afficherFichier

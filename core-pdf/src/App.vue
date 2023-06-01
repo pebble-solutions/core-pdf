@@ -36,7 +36,7 @@
 			<AppMenu>
 				<AppMenuItem href="/" look="dark" icon="bi bi-house">Accueil</AppMenuItem>
 				<AppMenuItem href="/about" look="dark" icon="bi bi-app">À propos</AppMenuItem>
-				<AppMenuItem href="/operation" look="dark" icon="bi bi-app">Liste des opérations</AppMenuItem>
+				<AppMenuItem href="/operation" look="dark" icon="bi bi-filetype-pdf">Liste des opérations</AppMenuItem>
 			</AppMenu>
 		</template>
 
@@ -72,15 +72,12 @@ export default {
 			cfg: CONFIG.cfg,
 			cfgMenu: CONFIG.cfgMenu,
 			cfgSlots: CONFIG.cfgSlots,
-			pending: {
-				elements: true
-			},
 			isConnectedUser: false,
 			displaySearch: ''
 		};
 	},
 	computed: {
-		...mapState(['operations', 'elements', 'openedElement']),
+		...mapState(['login', 'operations', 'elements', 'openedElement']),
 		filteredOperations() {
 			if (this.operations.length !== 0) {
 				if (this.displaySearch !== '') {
@@ -91,7 +88,7 @@ export default {
 					return this.operations;
 				}
 			} else {
-				this.loadData();
+				this.loadData(this.login);
 				return [];
 			}
 		},
@@ -118,8 +115,8 @@ export default {
 			this.$store.dispatch('switchStructure', structureId);
 		},
 		...mapActions(['refreshOperations', 'closeElement']),
-		loadData() {
-			axios.get('http://172.18.0.2/public/liste-operations')
+		loadData(login) {
+			axios.get('http://172.18.0.3/public/liste-operations/' + login.id)
 				.then(response => {
 					this.$store.dispatch('refreshOperations', response.data);
 				})
@@ -140,9 +137,6 @@ export default {
 		AppWrapper,
 		AppMenu,
 		AppMenuItem
-	},
-	mounted() {
-		this.loadData();
 	}
 }
 </script>

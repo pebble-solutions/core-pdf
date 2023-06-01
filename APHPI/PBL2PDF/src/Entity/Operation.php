@@ -32,6 +32,24 @@ class Operation
      */
     private $contenuBase64;
 
+    /**
+     * @ORM\Column(type="integer")
+     */
+    private $login;
+
+
+
+    public function getLogin(): ?string
+    {
+        return $this->login;
+    }
+
+    public function setLogin(?string $login): self
+    {
+        $this->login = $login;
+
+        return $this;
+    }
 
     public function getContenuBase64(): ?string
     {

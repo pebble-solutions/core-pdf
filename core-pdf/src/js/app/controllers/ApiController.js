@@ -17,6 +17,7 @@ export class ApiController {
         this.baseURL = options.baseURL;
         this.setStructure(options.structure?.id);
         this.setAuth(options.token);
+        // console.log(options.token)
         this.setBaseURL(options.baseURL);
     }
 

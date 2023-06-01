@@ -63,6 +63,7 @@ export default class App {
         this.licences = null;
         this.licence = null;
         this.authInited = false;
+        // const options={token:''};
         this.api = new ApiController();
 
         this.initializeAppKey();
