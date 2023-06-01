@@ -57,15 +57,18 @@ export default {
 
       axios
         .delete(apiUrl)
-        .then(response => {
+        .then( () => {
           // Suppression réussie
           this.$router.push('/operation');
-          console.log(response);
+
+          // Appel à la mutation removeOperation pour supprimer l'opération du state
+          this.$store.commit('removeOperation', [this.file.id]);
         })
         .catch(error => {
           console.error("Une erreur s'est produite lors de la suppression du fichier.", error);
         });
     },
+
     downloadPDF() {
       const link = document.createElement('a');
       link.href = this.pdfData;
@@ -73,7 +76,7 @@ export default {
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-    }
+    },
   }
 }
 </script>

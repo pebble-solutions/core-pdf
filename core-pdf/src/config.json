@@ -3,7 +3,7 @@
     "env": "dev",
     "cfg": {
         "module": "core-pdf",
-        "moduleLabel": "Convertisseur html vers pdf",
+        "moduleLabel": "Mes fichiers PDF",
         "aside": true,
         "app_mode": "default",
         "ppp": "private",

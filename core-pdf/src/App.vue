@@ -43,7 +43,7 @@
 		<template v-slot:list>
 			<AppMenu v-if="includeInRoute('operation')">
 				<input type="text" class="form-control my-2 px-2" placeholder="Rechercher..." v-model="displaySearch">
-				<AppMenuItem :href="'/operation/' + operation.id" icon="bi bi-file-earmark"
+				<AppMenuItem :href="'/operation/' + operation.id" icon="bi bi-filetype-pdf"
 					v-for="operation in filteredOperations" :key="operation.id">
 					{{ operation.fichier }}
 				</AppMenuItem>
@@ -77,7 +77,7 @@ export default {
 		};
 	},
 	computed: {
-		...mapState(['login', 'operations', 'elements', 'openedElement']),
+		...mapState(['login', 'operations', 'openedElement']),
 		filteredOperations() {
 			if (this.operations.length !== 0) {
 				if (this.displaySearch !== '') {
@@ -88,15 +88,14 @@ export default {
 					return this.operations;
 				}
 			} else {
-				this.loadData(this.login);
 				return [];
 			}
 		},
 	},
 	watch: {
-		$route() {
-			if (this.$route.name !== 'Home') {
-				this.$app.dispatchEvent('menuChanged', 'list');
+		$route(to) {
+			if (to.path === '/operation') {
+				this.loadData(this.login);
 			}
 		}
 	},

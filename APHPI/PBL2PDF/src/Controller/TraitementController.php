@@ -207,6 +207,7 @@ class TraitementController extends AbstractController
 
     #[Route('/operations/{login}', name: 'app_liste_operations_login')]
     public function listeOperationsLogin(EntityManagerInterface $entityManager, int $login): Response
+    
     {
         try {
             // Récupère toutes les opérations depuis le gestionnaire d'entités
