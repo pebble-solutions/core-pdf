@@ -205,7 +205,6 @@ export default createStore({
 			if (!('action' in payload)) {
 				payload.action = 'update';
 			}
-
 			if (payload.action == 'update') {
 				context.commit('updateElements', payload.elements);
 			}
@@ -218,6 +217,7 @@ export default createStore({
 			else {
 				throw new Error(`La mutation ${payload.action} n'existe pas.`);
 			}
+
 		},
 
 		refreshOperations(context, payload) {

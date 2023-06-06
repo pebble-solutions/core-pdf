@@ -115,7 +115,7 @@ export default {
 		},
 		...mapActions(['refreshOperations', 'closeElement']),
 		loadData(login) {
-			axios.get('http://172.18.0.3/public/liste-operations/' + login.id)
+			axios.get('http://172.18.0.2/public/liste-operations/' + login.id)
 				.then(response => {
 					this.$store.dispatch('refreshOperations', response.data);
 				})

@@ -21,6 +21,7 @@
 import VuePdfEmbed from 'vue-pdf-embed';
 import axios from 'axios';
 
+
 export default {
   components: {
     VuePdfEmbed
@@ -53,7 +54,7 @@ export default {
       }
     },
     deleteFile() {
-      const apiUrl = `http://172.18.0.3/public/fichier/del/${this.file.id}`;
+      const apiUrl = `http://172.18.0.2/public/fichier/del/${this.file.id}`;
 
       axios
         .delete(apiUrl)
